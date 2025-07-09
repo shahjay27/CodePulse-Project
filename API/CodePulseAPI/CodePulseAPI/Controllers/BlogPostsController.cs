@@ -11,10 +11,12 @@ namespace CodePulseAPI.Controllers
     public class BlogPostsController : ControllerBase
     {
         private readonly IBlogPostRepository blogPostRepo;
+        private readonly ICategoryRepository categoryRepo;
 
-        public BlogPostsController(IBlogPostRepository blogPostRepo)
+        public BlogPostsController(IBlogPostRepository blogPostRepo, ICategoryRepository categoryRepo)
         {
             this.blogPostRepo = blogPostRepo;
+            this.categoryRepo = categoryRepo;
         }
 
         [HttpPost]
@@ -30,8 +32,18 @@ namespace CodePulseAPI.Controllers
                 PublishedDate = request.PublishedDate,
                 Description = request.Description,
                 IsVisible = request.IsVisible,
-                UrlHandle = request.UrlHandle
+                UrlHandle = request.UrlHandle,
+                Categories = new List<Category>()
             };
+
+            foreach (var categoryGuid in request.Categories)
+            {
+                var existingCategory = await this.categoryRepo.FindByIdAsync(categoryGuid);
+                if (existingCategory is not null)
+                {
+                    blogPost.Categories.Add(existingCategory);
+                }
+            }
 
             blogPost = await this.blogPostRepo.CreateAsync(blogPost);
 
@@ -45,35 +57,162 @@ namespace CodePulseAPI.Controllers
                 IsVisible = blogPost.IsVisible,
                 UrlHandle = blogPost.UrlHandle,
                 PublishedDate = blogPost.PublishedDate,
-                FeaturedImageUrl = blogPost.FeaturedImageUrl
+                FeaturedImageUrl = blogPost.FeaturedImageUrl,
+                Categories = blogPost.Categories
+                   .Select(x => new CategoryDto
+                   {
+                       Id = x.Id,
+                       Name = x.Name,
+                       UrlHandle = x.UrlHandle
+                   }).ToList()
             };
 
-            return Ok();
+            return Ok(response);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllBlogPost()
         {
-            var blogPost = await this.blogPostRepo.GetAllAsync();
+            var blogPosts = await this.blogPostRepo.GetAllAsync();
 
             //to dto
             var response = new List<BlogPostDto>();
 
-            foreach(var blogpost in blogPost)
+            foreach (var blogpost in blogPosts)
             {
                 response.Add(new BlogPostDto
                 {
                     Id = blogpost.Id,
-                    Title= blogpost.Title,
+                    Title = blogpost.Title,
                     Author = blogpost.Author,
                     Content = blogpost.Content,
                     Description = blogpost.Description,
                     IsVisible = blogpost.IsVisible,
                     UrlHandle = blogpost.UrlHandle,
                     PublishedDate = blogpost.PublishedDate,
-                    FeaturedImageUrl = blogpost.FeaturedImageUrl
+                    FeaturedImageUrl = blogpost.FeaturedImageUrl,
+                    Categories = blogpost.Categories.Select(x => new CategoryDto
+                    {
+                        Id = x.Id,
+                        Name = x.Name,
+                        UrlHandle = x.UrlHandle
+                    }).ToList()
                 });
             }
+
+            return Ok(response);
+        }
+
+        [HttpGet]
+        [Route("{id:Guid}")]
+        public async Task<IActionResult> GetBlogPostByID([FromRoute] Guid id)
+        {
+            var blogPost = await blogPostRepo.GetByIdAsync(id);
+
+            if (blogPost is null)
+                return NotFound();
+
+            var response = new BlogPostDto
+            {
+                Id = blogPost.Id,
+                Title = blogPost.Title,
+                Author = blogPost.Author,
+                Content = blogPost.Content,
+                Description = blogPost.Description,
+                IsVisible = blogPost.IsVisible,
+                UrlHandle = blogPost.UrlHandle,
+                PublishedDate = blogPost.PublishedDate,
+                FeaturedImageUrl = blogPost.FeaturedImageUrl,
+                Categories = blogPost.Categories
+                   .Select(x => new CategoryDto
+                   {
+                       Id = x.Id,
+                       Name = x.Name,
+                       UrlHandle = x.UrlHandle
+                   }).ToList()
+            };
+
+            return Ok(response);
+        }
+
+        [HttpPut]
+        [Route("{id:Guid}")]
+        public async Task<IActionResult> UpdateBlogPost([FromRoute] Guid id,[FromBody] UpdateBlogPostRequestDto request)
+        {
+            // From DTO to Domain model
+            var blogPost = new BlogPost
+            {
+                Id = id,
+                Title = request.Title,
+                Author = request.Author,
+                Content = request.Content,
+                FeaturedImageUrl = request.FeaturedImageUrl,
+                PublishedDate = request.PublishedDate,
+                Description = request.Description,
+                IsVisible = request.IsVisible,
+                UrlHandle = request.UrlHandle,
+                Categories = new List<Category>()
+            };
+
+            foreach(var categoryGuid in request.Categories)
+            {
+                var existingCat = await categoryRepo.FindByIdAsync(categoryGuid);
+
+                if(existingCat != null)
+                    blogPost.Categories.Add(existingCat);
+            }
+
+            // call repo to update
+            var updateBlogPost = await blogPostRepo.UpdateBlogPostAsync(blogPost);
+
+            if(updateBlogPost == null)
+                return NotFound();
+
+            // Convert to DTO
+            var response = new BlogPostDto
+            {
+                Id = blogPost.Id,
+                Title = blogPost.Title,
+                Author = blogPost.Author,
+                Content = blogPost.Content,
+                Description = blogPost.Description,
+                IsVisible = blogPost.IsVisible,
+                UrlHandle = blogPost.UrlHandle,
+                PublishedDate = blogPost.PublishedDate,
+                FeaturedImageUrl = blogPost.FeaturedImageUrl,
+                Categories = blogPost.Categories
+                   .Select(x => new CategoryDto
+                   {
+                       Id = x.Id,
+                       Name = x.Name,
+                       UrlHandle = x.UrlHandle
+                   }).ToList()
+            };
+
+            return Ok(response);
+        }
+
+        [HttpDelete]
+        [Route("{id:Guid}")]
+        public async Task<IActionResult> DeleteById([FromRoute] Guid id)
+        {
+            var deletedBlogPost = await blogPostRepo.DeleteAsync(id);
+
+            if(deletedBlogPost == null) return NotFound();
+
+            //domain to DTO
+            var response = new BlogPostDto
+            {
+                Id = deletedBlogPost.Id,
+                Title = deletedBlogPost.Title,
+                Author = deletedBlogPost.Author,
+                Content = deletedBlogPost.Content,
+                Description = deletedBlogPost.Description,
+                IsVisible = deletedBlogPost.IsVisible,
+                UrlHandle = deletedBlogPost.UrlHandle,
+                PublishedDate = deletedBlogPost.PublishedDate,
+                FeaturedImageUrl = deletedBlogPost.FeaturedImageUrl
+            };
 
             return Ok(response);
         }

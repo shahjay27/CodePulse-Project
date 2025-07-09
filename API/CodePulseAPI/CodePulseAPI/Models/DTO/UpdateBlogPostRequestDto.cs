@@ -1,8 +1,7 @@
 ﻿namespace CodePulseAPI.Models.DTO
 {
-    public class BlogPostDto
+    public class UpdateBlogPostRequestDto
     {
-        public Guid Id { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
         public string Content { get; set; }
@@ -11,6 +10,6 @@
         public DateTime PublishedDate { get; set; }
         public string Author { get; set; }
         public bool IsVisible { get; set; }
-        public List<CategoryDto> Categories { get; set; } = new List<CategoryDto>();
+        public List<Guid> Categories { get; set; } = new List<Guid>();
     }
 }

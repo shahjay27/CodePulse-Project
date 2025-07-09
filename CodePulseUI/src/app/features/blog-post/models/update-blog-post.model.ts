@@ -1,4 +1,4 @@
-export interface AddBlogPost {
+export interface UpdateBlogPost {
   title: string;
   description: string;
   content: string;
