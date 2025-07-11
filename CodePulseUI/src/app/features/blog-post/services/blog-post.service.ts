@@ -11,7 +11,7 @@ import { observableToBeFn } from 'rxjs/internal/testing/TestScheduler';
   providedIn: 'root',
 })
 export class BlogPostService {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   createBlogPost(data: AddBlogPost): Observable<BlogPost> {
     return this.http.post<BlogPost>(
@@ -43,6 +43,12 @@ export class BlogPostService {
   deleteBlogPost(id: string): Observable<BlogPost> {
     return this.http.delete<BlogPost>(
       `${environment.apiBaseUrl}/api/blogposts/${id}`
+    );
+  }
+
+  getBlogPostByUrlHandle(url: string): Observable<BlogPost> {
+    return this.http.get<BlogPost>(
+      `${environment.apiBaseUrl}/api/blogposts/${url}`
     );
   }
 }
