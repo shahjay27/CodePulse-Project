@@ -10,10 +10,50 @@ import { Observable } from 'rxjs';
 })
 export class CategoryListComponent implements OnInit {
   categories$?: Observable<Category[]>;
+  totalCount?: number;
+  list: number[] = [];
+  pageNumber = 1;
+  pageSize = 1;
 
-  constructor(private categoryService: CategoryService) {}
+  constructor(private categoryService: CategoryService) { }
 
   ngOnInit(): void {
-    this.categories$ = this.categoryService.getAllCategories();
+    this.categoryService.getCategoryCount()
+      .subscribe({
+        next: (value) => {
+          this.totalCount = value;
+          this.list = new Array(Math.ceil(value / this.pageSize));
+          this.categories$ = this.categoryService.getAllCategories(undefined, undefined, undefined, this.pageNumber, this.pageSize);
+        }
+      });
+  }
+
+  onSearch(query: string) {
+    this.categories$ = this.categoryService.getAllCategories(query);
+  }
+
+  sort(sortBy: string, sortDirection: string) {
+    this.categories$ = this.categoryService.getAllCategories(undefined, sortBy, sortDirection);
+  }
+
+  getPage(pageNumber: number) {
+    this.pageNumber = pageNumber;
+    this.categories$ = this.categoryService.getAllCategories(undefined, undefined, undefined, pageNumber, this.pageSize);
+  }
+
+  getPreviousPage() {
+    if (this.pageNumber - 1 < 1) {
+      return;
+    }
+
+    this.getPage(this.pageNumber - 1);
+  }
+
+  getNextPage() {
+    if (this.pageNumber + 1 > this.list.length) {
+      return;
+    }
+
+    this.getPage(this.pageNumber + 1);
   }
 }

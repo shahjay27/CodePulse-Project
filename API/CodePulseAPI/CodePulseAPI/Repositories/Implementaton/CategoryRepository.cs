@@ -38,16 +38,46 @@ namespace CodePulseAPI.Repositories.Implementaton
             return await dbContext.Categories.FirstOrDefaultAsync(c => c.Id == id);
         }
 
-        public async Task<IEnumerable<Category>> GetAllAsync()
+        public async Task<IEnumerable<Category>> GetAllAsync(string? query = null, string? sortBy = null, string? sortDirection = null, int? pageNumber = 1, int? pageSize = 100)
         {
-            return await dbContext.Categories.ToListAsync();
+            // Query
+            var categories = dbContext.Categories.AsQueryable();
+
+            // Filtering
+            if (string.IsNullOrWhiteSpace(query) == false)
+            {
+                categories = categories.Where(x => x.Name.Contains(query));
+            }
+
+            // Sorting
+            if (string.IsNullOrWhiteSpace(sortBy) == false)
+            {
+                if (string.Equals(sortBy, "Name", StringComparison.OrdinalIgnoreCase))
+                {
+                    var isAsc = string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase) ? true : false;
+                    categories = isAsc ? categories.OrderBy(x => x.Name) : categories.OrderByDescending(x => x.Name);
+                }
+
+            }
+
+            //Pagination
+            var skipResult = (pageNumber - 1) * pageSize;
+            categories = categories.Skip(skipResult ?? 0).Take(pageSize ?? 100);
+
+            return await categories.ToListAsync();
+            //return await dbContext.Categories.ToListAsync();
+        }
+
+        public async Task<int> GetCount()
+        {
+            return await dbContext.Categories.CountAsync();
         }
 
         public async Task<Category?> UpdateAsync(Category category)
         {
-            var existingCategory = await dbContext.Categories.FirstOrDefaultAsync(c=>c.Id == category.Id);
+            var existingCategory = await dbContext.Categories.FirstOrDefaultAsync(c => c.Id == category.Id);
 
-            if(existingCategory != null)
+            if (existingCategory != null)
             {
                 dbContext.Entry(existingCategory).CurrentValues.SetValues(category);
                 await dbContext.SaveChangesAsync();
@@ -56,5 +86,7 @@ namespace CodePulseAPI.Repositories.Implementaton
 
             return null;
         }
+
+
     }
 }
